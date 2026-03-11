@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Greenfoot Energy • Golf Simulator Check-in</title>
+<style>
+  :root {
+    --bg-dark:      #04140c;
+    --bg-mid:       #0b2e1d;
+    --card:         rgba(3,18,12,.75);
+    --muted:        #9fb7aa;
+    --text:         #e6f4ec;
+    --accent:       #18c964;
+    --accent-glow:  rgba(24,201,100,.35);
+    --warn:         #f59e0b;
+    --danger:       #ef4444;
+    --border:       rgba(255,255,255,.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: linear-gradient(160deg, var(--bg-dark), var(--bg-mid));
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Place your logo file (GF-LOGO.png) alongside this HTML file */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("GF-LOGO.png") center / 55% no-repeat;
+    opacity: .05;
+    pointer-events: none;
+  }
+
+  .wrap {
+    position: relative;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.05;
+  }
+
+  .clock {
+    color: var(--muted);
+    font-size: 18px;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* ── Booking list ── */
+  .list { display: grid; gap: 20px; }
+
+  .slot {
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 18px;
+    transition: all .2s;
+  }
+
+  .slot.active  { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .slot.wait    { opacity: .65; }
+  .slot.expired { opacity: .35; }
+
+  .slot-info { display: flex; flex-direction: column; gap: 8px; }
+  .name  { font-size: 28px; font-weight: 700; }
+  .time  { font-size: 18px; color: var(--muted); }
+
+  .right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  /* ── Status pills ── */
+  .pill {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid transparent;
+  }
+  .pill.active  { background: rgba(24,201,100,.15); color: var(--accent); border-color: rgba(24,201,100,.4); }
+  .pill.wait    { background: rgba(245,158,11,.15);  color: var(--warn);   border-color: rgba(245,158,11,.4); }
+  .pill.expired { background: rgba(239,68,68,.15);   color: var(--danger); border-color: rgba(239,68,68,.4); }
+
+  /* ── Buttons ── */
+  button {
+    font-size: 18px;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #18c964, #11a851);
+    color: #052e16;
+    font-weight: 800;
+    min-width: 170px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    transition: transform .05s, box-shadow .2s, opacity .05s;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button:active   { transform: scale(.97); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  /* ── Status footer ── */
+  footer { margin-top: 32px; min-height: 24px; font-size: 18px; color: var(--muted); }
+  .ok { color: var(--accent); font-weight: 800; }
+  .no { color: var(--danger); font-weight: 800; }
+
+  /* ── PIN modal ── */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+  }
+
+  .modal {
+    width: min(520px, 100%);
+    background: rgba(3,18,12,.95);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 26px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+
+  .modal h2  { margin: 0 0 8px; font-size: 24px; }
+  .modal-sub { color: var(--muted); margin-bottom: 16px; }
+
+  .pin-row { margin: 14px 0 10px; }
+  .pin-row input {
+    width: 100%;
+    font-size: 28px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: #0b2e1d;
+    color: var(--text);
+    letter-spacing: .35em;
+    text-align: center;
+    outline: none;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .keypad button {
+    min-width: 0;
+    width: 100%;
+    padding: 16px 0;
+    border-radius: 14px;
+    background: #0d3b24;
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .keypad .action { background: #0f4a2c; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+
+  .modal-msg { margin-top: 10px; min-height: 22px; color: var(--muted); }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <header>
+    <h1>
+      Greenfoot Energy Solutions<br>
+      <span style="font-size:24px;font-weight:500;color:#9fb7aa">Golf Simulator Check‑In</span>
+    </h1>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <div class="list" id="list"></div>
+  <footer id="status"></footer>
+</div>
+
+<!-- PIN modal -->
+<div class="backdrop" id="backdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 id="modalTitle">Enter PIN</h2>
+    <p class="modal-sub" id="modalSub">Confirm your booking to start.</p>
+
+    <div class="pin-row">
+      <input id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off"/>
+    </div>
+
+    <div class="keypad" id="keypad"></div>
+    <div class="modal-msg" id="modalMsg"></div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelBtn">Cancel</button>
+      <button id="confirmBtn">Launch game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // =========================================================
+  // CONFIG — replace placeholders before deploying
+  // =========================================================
+  const BOOKINGS_API    = "YOUR_BOOKINGS_WEBHOOK_URL";   // e.g. https://your-n8n-instance.com/webhook/golf/bookings
+  const VALIDATE_API    = "YOUR_VALIDATE_WEBHOOK_URL";   // e.g. https://your-n8n-instance.com/webhook/golf/validate
+  const LAUNCH_API      = "http://127.0.0.1:17333/launch"; // local launcher — no change needed
+  const TIMEZONE        = "America/Halifax";
+  const REFRESH_MS      = 15_000;
+  const GRACE_MINUTES   = 5;   // how many minutes early a session becomes "active"
+  // =========================================================
+
+  const $list      = document.getElementById("list");
+  const $status    = document.getElementById("status");
+  const $clock     = document.getElementById("clock");
+  const $backdrop  = document.getElementById("backdrop");
+  const $pinInput  = document.getElementById("pinInput");
+  const $modalTitle = document.getElementById("modalTitle");
+  const $modalSub  = document.getElementById("modalSub");
+  const $modalMsg  = document.getElementById("modalMsg");
+  const $cancelBtn = document.getElementById("cancelBtn");
+  const $confirmBtn = document.getElementById("confirmBtn");
+  const $keypad    = document.getElementById("keypad");
+
+  let activeEvent = null;
+
+  // ── Clock ──────────────────────────────────────────────
+  function updateClock() {
+    const atl = new Date().toLocaleString([], { timeZone: TIMEZONE });
+    $clock.innerHTML = `<div>${atl}</div><div style="font-size:14px;opacity:.7">Atlantic Time</div>`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Helpers ────────────────────────────────────────────
+  function todayISO() {
+    const p = new Intl.DateTimeFormat("en-CA", {
+      timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    return ["year","month","day"].map(t => p.find(x => x.type === t).value).join("-");
+  }
+
+  function fmtTime(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function slotState(ev) {
+    const now   = Date.now();
+    const start = new Date(ev.start).getTime();
+    const end   = new Date(ev.end).getTime();
+    if (now < start - GRACE_MINUTES * 60_000) return "wait";
+    if (now <= end)                            return "active";
+    return "expired";
+  }
+
+  // ── Bookings ───────────────────────────────────────────
+  async function fetchBookings() {
+    const res = await fetch(`${BOOKINGS_API}?date=${encodeURIComponent(todayISO())}`);
+    if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+    return res.json();
+  }
+
+  function render(bookings) {
+    $list.innerHTML = "";
+
+    if (!bookings.length) {
+      $list.innerHTML = `<div class="time">No bookings today.</div>`;
+      return;
+    }
+
+    for (const ev of bookings) {
+      const state = slotState(ev);
+      const label = { active: "Ready", wait: "Not yet", expired: "Expired" }[state];
+
+      const row = document.createElement("div");
+      row.className = `slot ${state}`;
+      row.innerHTML = `
+        <div class="slot-info">
+          <div class="name">${ev.title}</div>
+          <div class="time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div>
+        </div>
+        <div class="right">
+          <span class="pill ${state}">${label}</span>
+        </div>`;
+
+      if (state === "active") {
+        const btn = document.createElement("button");
+        btn.textContent = "Start session";
+        btn.onclick = () => openModal(ev);
+        row.querySelector(".right").appendChild(btn);
+      }
+
+      $list.appendChild(row);
+    }
+  }
+
+  async function refresh() {
+    try {
+      const data = await fetchBookings();
+      const sorted = (data.bookings ?? []).sort((a, b) => new Date(a.start) - new Date(b.start));
+      render(sorted);
+    } catch (e) {
+      $list.innerHTML = `<div class="no">⛔ Backend error</div>`;
+      $status.textContent = e.message ?? String(e);
+    }
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+
+  // ── PIN modal ──────────────────────────────────────────
+  function openModal(ev) {
+    activeEvent = ev;
+    $modalTitle.textContent = "Enter PIN";
+    $modalSub.textContent   = `${ev.title} • ${fmtTime(ev.start)} – ${fmtTime(ev.end)}`;
+    $modalMsg.textContent   = "";
+    $pinInput.value         = "";
+    $confirmBtn.disabled    = false;
+    $backdrop.style.display = "flex";
+    setTimeout(() => $pinInput.focus(), 50);
+  }
+
+  function closeModal() {
+    $backdrop.style.display = "none";
+    activeEvent = null;
+  }
+
+  // Keypad
+  (function buildKeypad() {
+    for (const k of ["1","2","3","4","5","6","7","8","9","Clear","0","⌫"]) {
+      const b = document.createElement("button");
+      b.textContent = k;
+      if (k === "Clear" || k === "⌫") b.classList.add("action");
+      b.onclick = () => {
+        if (k === "Clear")    $pinInput.value = "";
+        else if (k === "⌫")  $pinInput.value = $pinInput.value.slice(0, -1);
+        else if ($pinInput.value.length < 6) $pinInput.value += k;
+        $pinInput.focus();
+      };
+      $keypad.appendChild(b);
+    }
+  })();
+
+  // ── Confirm / launch ───────────────────────────────────
+  async function onConfirm() {
+    if (!activeEvent) return;
+
+    const pin = $pinInput.value.trim();
+    if (!/^\d{6}$/.test(pin)) {
+      $modalMsg.innerHTML = `<span class="no">⛔</span> Enter a 6-digit PIN.`;
+      return;
+    }
+
+    $confirmBtn.disabled = true;
+    $modalMsg.textContent = "Checking PIN…";
+
+    try {
+      const validation = await fetch(VALIDATE_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: activeEvent.id, pin })
+      }).then(r => { if (!r.ok) throw new Error(`Validate returned ${r.status}`); return r.json(); });
+
+      if (!validation.allowed) {
+        $confirmBtn.disabled = false;
+        $modalMsg.innerHTML = `<span class="no">⛔</span> ${validation.reason ?? "Invalid PIN"}`;
+        return;
+      }
+
+      $modalMsg.innerHTML = `<span class="ok">✅ Approved.</span> Launching simulator…`;
+      $status.innerHTML   = `<span class="ok">✅ Session started for ${activeEvent.title}</span>`;
+
+      await fetch(LAUNCH_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: activeEvent.id, endAt: activeEvent.end, warnMinutes: 5 })
+      }).then(r => { if (!r.ok) throw new Error(`Launcher returned ${r.status}`); });
+
+      setTimeout(closeModal, 700);
+
+    } catch (e) {
+      $confirmBtn.disabled = false;
+      $modalMsg.innerHTML = `<span class="no">⛔</span> ${e.message ?? e}`;
+    }
+  }
+
+  $confirmBtn.onclick = onConfirm;
+  $cancelBtn.onclick  = closeModal;
+  $backdrop.addEventListener("click", e => { if (e.target === $backdrop) closeModal(); });
+  window.addEventListener("keydown", e => {
+    if ($backdrop.style.display !== "flex") return;
+    if (e.key === "Escape") closeModal();
+    if (e.key === "Enter")  onConfirm();
+  });
+</script>
+</body>
+</html>
